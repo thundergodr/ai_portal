@@ -5,9 +5,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from forms import RegistrationForm, LoginForm
 from models import User
 from config import Config
-from dotenv import load_dotenv
-import os
-from extensions import db
+from extensions import db  # Import db from extensions
 
 # Initialize the app
 app = Flask(__name__)
@@ -15,7 +13,6 @@ app.config.from_object(Config)
 
 # Initialize extensions
 db.init_app(app)
-
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'
@@ -27,43 +24,81 @@ def load_user(user_id):
 # Register route
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    form = RegistrationForm()  # Create the form instance
+    if current_user.is_authenticated:
+        print("User is already logged in, redirecting to chat.")
+        return redirect(url_for('chat'))
+    
+    form = RegistrationForm()
+    print("Registration form loaded.")
+
     if form.validate_on_submit():
+        print("Form validation successful.")
+        
+        # Check if username or email already exists
+        existing_user = User.query.filter((User.username == form.username.data) | (User.email == form.email.data)).first()
+        if existing_user:
+            flash('Username or email already exists. Please choose a different one.', 'danger')
+            return redirect(url_for('register'))
+        
         hashed_password = generate_password_hash(form.password.data)
         user = User(username=form.username.data, email=form.email.data, password_hash=hashed_password)
+        
         db.session.add(user)
-        db.session.commit()
-        flash('Account created successfully! You can now log in.', 'success')
-        return redirect(url_for('login'))
-    return render_template('register.html', form=form)  # Pass the form to the template
+        try:
+            db.session.commit()
+            print("User successfully added to the database.")
+            flash('Your account has been created! You can now log in.', 'success')
+            return redirect(url_for('login'))
+        except Exception as e:
+            print(f"Error during commit: {e}")
+            db.session.rollback()
+            flash('An error occurred during registration. Please try again.', 'danger')
+    else:
+        print("Form validation failed or not submitted yet.")
+
+    return render_template('register.html', form=form)
 
 # Login route
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    form = LoginForm()  # Create the form instance
+    if current_user.is_authenticated:
+        print("User is already logged in, redirecting to chat.")
+        return redirect(url_for('chat'))
+    
+    form = LoginForm()
+    print("Login form loaded.")
+    
     if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
+        print("Form validation successful.")
+        user = User.query.filter_by(username=form.username.data).first()
         if user and check_password_hash(user.password_hash, form.password.data):
-            login_user(user, remember=True)
-            next_page = request.args.get('next')
-            return redirect(next_page) if next_page else redirect(url_for('chat'))
+            print("Password check successful.")
+            login_user(user)
+            flash('Login successful!', 'success')
+            return redirect(url_for('chat'))
         else:
-            flash('Login unsuccessful. Check email and password.', 'danger')
-    return render_template('login.html', form=form)  # Pass the form to the template
+            print("Invalid credentials.")
+            flash('Login unsuccessful. Please check username and password.', 'danger')
+    else:
+        print("Form validation failed or not submitted yet.")
+
+    return render_template('login.html', form=form)
 
 # Chat route
 @app.route('/chat')
-@login_required  # Optional: Only allow logged-in users to access chat
+@login_required
 def chat():
-    return render_template('chat.html')  # Render chat UI
+    return render_template('chat.html', username=current_user.username)
 
 # Logout route
-@app.route('/logout')
+@app.route('/logout', methods=['POST'])
+@login_required
 def logout():
     logout_user()
+    flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()  # Ensure tables are created
+        db.create_all()  # This should create the tables in the database
     app.run(debug=True)

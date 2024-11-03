@@ -4,27 +4,75 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
+    <style>
+        /* Set up the background image */
+        body {
+            background-image: url('/static/images/login_background.png.webp'); /* Path to your background image */
+            background-size: cover;
+            background-position: center;
+            color: #333;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .form-container {
+            background: rgba(255, 255, 255, 0.9); /* Slight opacity for readability */
+            padding: 2rem;
+            border-radius: 8px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .error-message {
+            color: red;
+            font-size: 0.9em;
+        }
+    </style>
 </head>
 <body>
-    <h1>Login</h1>
-    
-    <!-- Flash messages for feedback -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }}">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-    
-    <!-- Login Form -->
-    <form action="{{ url_for('login') }}" method="POST">
-        {{ form.hidden_tag() }}
-        <label for="username">Username</label>
-        {{ form.username }}
-        <label for="password">Password</label>
-        {{ form.password }}
-        <button type="submit">Login</button>
-    </form>
+    <div class="form-container">
+        <h1>Login</h1>
+
+        <!-- Flash messages for error feedback -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <!-- Login Form -->
+        <form method="POST" action="{{ url_for('login') }}">
+            {{ form.hidden_tag() }}
+
+            <div>
+                <label for="username">Username</label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                    <div class="error-message">{{ form.username.errors[0] }}</div>
+                {% endif %}
+            </div>
+
+            <div>
+                <label for="password">Password</label>
+                {{ form.password }}
+                {% if form.password.errors %}
+                    <div class="error-message">{{ form.password.errors[0] }}</div>
+                {% endif %}
+            </div>
+
+            <button type="submit">{{ form.submit.label }}</button>
+        </form>
+
+        <!-- Optional link for users without an account -->
+        <div class="register-link">
+            <p>Don't have an account? <a href="{{ url_for('register') }}">Register here</a>.</p>
+        </div>
+    </div>
 </body>
 </html>

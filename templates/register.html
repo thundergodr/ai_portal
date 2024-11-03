@@ -2,40 +2,106 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register</title>
+    <style>
+        /* Set up the background image */
+        body {
+            background-image: url('/static/images/registration_background.png.webp'); /* Flask path */
+            background-size: cover;
+            background-position: center;
+            color: #333;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .form-container {
+            background: rgba(255, 255, 255, 0.9); /* Slight opacity for readability */
+            padding: 2rem;
+            border-radius: 8px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .error-message {
+            color: red;
+            font-size: 0.9em;
+        }
+        .already-registered {
+            margin-top: 1rem;
+            font-size: 0.9em;
+            color: #555;
+        }
+        .already-registered a {
+            color: #007BFF;
+            text-decoration: none;
+        }
+        .already-registered a:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <ul>
-          {% for category, message in messages %}
-            <li class="{{ category }}">{{ message }}</li>
-          {% endfor %}
-        </ul>
-      {% endif %}
-    {% endwith %}
+    <div class="form-container">
+        <h1>Register</h1>
 
-    <form method="POST">
-        {{ form.hidden_tag() }}
-        <p>
-            {{ form.username.label }}<br>
-            {{ form.username }}
-        </p>
-        <p>
-            {{ form.email.label }}<br>
-            {{ form.email }}
-        </p>
-        <p>
-            {{ form.password.label }}<br>
-            {{ form.password }}
-        </p>
-        <p>
-            {{ form.confirm_password.label }}<br>
-            {{ form.confirm_password }}
-        </p>
-        <p>{{ form.submit() }}</p>
-    </form>
+        <!-- Flash messages for error feedback -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
 
-    <p>Already registered? <a href="{{ url_for('login') }}">Log in here.</a></p>
+        <!-- Registration Form -->
+        <form method="POST" action="{{ url_for('register') }}">
+            {{ form.hidden_tag() }}
+
+            <div>
+                <label for="username">Username</label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                    <div class="error-message">{{ form.username.errors[0] }}</div>
+                {% endif %}
+            </div>
+
+            <div>
+                <label for="email">Email</label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                    <div class="error-message">{{ form.email.errors[0] }}</div>
+                {% endif %}
+            </div>
+
+            <div>
+                <label for="password">Password</label>
+                {{ form.password }}
+                <small>Password must be at least 8 characters.</small>
+                {% if form.password.errors %}
+                    <div class="error-message">{{ form.password.errors[0] }}</div>
+                {% endif %}
+            </div>
+
+            <div>
+                <label for="confirm_password">Confirm Password</label>
+                {{ form.confirm_password }}
+                {% if form.confirm_password.errors %}
+                    <div class="error-message">{{ form.confirm_password.errors[0] }}</div>
+                {% endif %}
+            </div>
+
+            <button type="submit">{{ form.submit.label }}</button>
+        </form>
+
+        <!-- Already Registered Button -->
+        <div class="already-registered">
+            <p>Already registered? <a href="{{ url_for('login') }}">Log in here</a>.</p>
+        </div>
+    </div>
 </body>
 </html>

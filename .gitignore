@@ -1,0 +1,10 @@
+.env
+
+# Ignore the virtual environment
+myenv/
+
+# Ignore Python cache files
+__pycache__/
+
+# Ignore instance folder (contains your database)
+instance/

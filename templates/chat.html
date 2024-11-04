@@ -4,6 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Initialize the socket connection
+            const socket = io.connect('http://' + document.domain + ':' + location.port);
+            const form = document.getElementById("chat-form");
+            const input = document.getElementById("chat-input");
+            const messages = document.getElementById("messages");
+            const username = "{{ username }}";
+
+            // Listen for incoming messages
+            socket.on('message', function (msg) {
+                const item = document.createElement('li');
+                item.textContent = `${msg.username}: ${msg.message}`;
+                messages.appendChild(item);
+                window.scrollTo(0, document.body.scrollHeight);
+            });
+
+            // Handle form submission to send a message
+            form.onsubmit = function (e) {
+                e.preventDefault();
+                const message = input.value;
+                socket.emit('message', { 'username': username, 'message': message });
+                input.value = '';
+            };
+        });
+    </script>
 </head>
 <body>
     <h1>Welcome to the Chat, {{ username }}!</h1>
@@ -11,6 +38,15 @@
     <!-- Logout button -->
     <form action="{{ url_for('logout') }}" method="POST">
         <button type="submit">Logout</button>
+    </form>
+
+    <!-- Chat message display -->
+    <ul id="messages"></ul>
+
+    <!-- Chat input form -->
+    <form id="chat-form">
+        <input id="chat-input" autocomplete="off" placeholder="Type your message...">
+        <button type="submit">Send</button>
     </form>
 </body>
 </html>

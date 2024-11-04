@@ -1,11 +1,18 @@
 from flask import Flask, render_template, redirect, url_for, flash, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, current_user, logout_user, login_required
+from flask_socketio import SocketIO, emit
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import RegistrationForm, LoginForm
 from models import User
 from config import Config
 from extensions import db  # Import db from extensions
+import openai
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Initialize the app
 app = Flask(__name__)
@@ -16,6 +23,10 @@ db.init_app(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'
+socketio = SocketIO(app)  # Initialize SocketIO
+
+# Set OpenAI API key from environment variable
+openai.api_key = os.getenv('OPENAI_API_KEY')
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -90,6 +101,29 @@ def login():
 def chat():
     return render_template('chat.html', username=current_user.username)
 
+# Handle chat messages with SocketIO
+@socketio.on('message')
+def handle_message(data):
+    user_message = data['message']
+    username = data['username']
+
+    # Broadcast user message to all clients
+    emit('message', {'username': username, 'message': user_message}, broadcast=True)
+
+    # Generate AI response using gpt-3.5-turbo
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": user_message}
+        ],
+        max_tokens=50
+    )
+
+    ai_message = response.choices[0].message['content'].strip()
+    # Broadcast AI response to all clients
+    emit('message', {'username': 'AI', 'message': ai_message}, broadcast=True)
+
 # Logout route
 @app.route('/logout', methods=['POST'])
 @login_required
@@ -101,4 +135,4 @@ def logout():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()  # This should create the tables in the database
-    app.run(debug=True)
+    socketio.run(app, debug=True)  # Use socketio.run instead of app.run

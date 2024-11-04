@@ -5,6 +5,90 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+    <style>
+        /* Set the background image */
+        body {
+            background-image: url("{{ url_for('static', filename='images/chat_background.png.webp') }}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        /* Chat container */
+        .chat-container {
+            background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent background */
+            border-radius: 10px;
+            padding: 20px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Header */
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        /* Logout button */
+        form[action="{{ url_for('logout') }}"] {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* Messages list */
+        #messages {
+            list-style-type: none;
+            padding: 0;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+
+        /* Message items */
+        #messages li {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        /* Input form */
+        #chat-form {
+            display: flex;
+            gap: 5px;
+        }
+
+        /* Input field */
+        #chat-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        /* Send button */
+        #chat-form button {
+            padding: 10px;
+            border: none;
+            background-color: #007BFF;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #chat-form button:hover {
+            background-color: #0056b3;
+        }
+    </style>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             // Initialize the socket connection
@@ -19,34 +103,38 @@
                 const item = document.createElement('li');
                 item.textContent = `${msg.username}: ${msg.message}`;
                 messages.appendChild(item);
-                window.scrollTo(0, document.body.scrollHeight);
+                messages.scrollTop = messages.scrollHeight;
             });
 
             // Handle form submission to send a message
             form.onsubmit = function (e) {
                 e.preventDefault();
-                const message = input.value;
-                socket.emit('message', { 'username': username, 'message': message });
-                input.value = '';
+                const message = input.value.trim();
+                if (message) {
+                    socket.emit('message', { 'username': username, 'message': message });
+                    input.value = '';
+                }
             };
         });
     </script>
 </head>
 <body>
-    <h1>Welcome to the Chat, {{ username }}!</h1>
+    <div class="chat-container">
+        <h1>Welcome to the Chat, {{ username }}!</h1>
 
-    <!-- Logout button -->
-    <form action="{{ url_for('logout') }}" method="POST">
-        <button type="submit">Logout</button>
-    </form>
+        <!-- Logout button -->
+        <form action="{{ url_for('logout') }}" method="POST">
+            <button type="submit">Logout</button>
+        </form>
 
-    <!-- Chat message display -->
-    <ul id="messages"></ul>
+        <!-- Chat message display -->
+        <ul id="messages"></ul>
 
-    <!-- Chat input form -->
-    <form id="chat-form">
-        <input id="chat-input" autocomplete="off" placeholder="Type your message...">
-        <button type="submit">Send</button>
-    </form>
+        <!-- Chat input form -->
+        <form id="chat-form">
+            <input id="chat-input" autocomplete="off" placeholder="Type your message...">
+            <button type="submit">Send</button>
+        </form>
+    </div>
 </body>
 </html>

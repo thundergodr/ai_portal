@@ -10,6 +10,7 @@ from extensions import db  # Import db from extensions
 import openai
 import os
 from dotenv import load_dotenv
+from datetime import datetime  # Import at the top
 
 # Load environment variables from .env file
 load_dotenv()
@@ -107,10 +108,13 @@ def handle_message(data):
     user_message = data['message']
     username = data['username']
 
-    # Broadcast user message to all clients
-    emit('message', {'username': username, 'message': user_message}, broadcast=True)
+    # Generate a timestamp
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    # Generate AI response using gpt-3.5-turbo
+    # Broadcast user message to all clients with the timestamp
+    emit('message', {'username': username, 'message': user_message, 'timestamp': timestamp}, broadcast=True)
+
+    # Generate AI response
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
@@ -121,8 +125,8 @@ def handle_message(data):
     )
 
     ai_message = response.choices[0].message['content'].strip()
-    # Broadcast AI response to all clients
-    emit('message', {'username': 'AI', 'message': ai_message}, broadcast=True)
+    # Broadcast AI response to all clients with the timestamp
+    emit('message', {'username': 'AI', 'message': ai_message, 'timestamp': timestamp}, broadcast=True)
 
 # Logout route
 @app.route('/logout', methods=['POST'])

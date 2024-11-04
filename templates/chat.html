@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -98,12 +98,23 @@
             const messages = document.getElementById("messages");
             const username = "{{ username }}";
 
+            // Format current time for timestamp
+            function formatTime(date) {
+                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+
+            // Scroll to the newest message
+            function scrollToBottom() {
+                messages.scrollTop = messages.scrollHeight;
+            }
+
             // Listen for incoming messages
             socket.on('message', function (msg) {
                 const item = document.createElement('li');
-                item.textContent = `${msg.username}: ${msg.message}`;
+                const timestamp = formatTime(new Date());
+                item.textContent = `[${timestamp}] ${msg.username}: ${msg.message}`;
                 messages.appendChild(item);
-                messages.scrollTop = messages.scrollHeight;
+                scrollToBottom(); // Auto-scroll to the bottom
             });
 
             // Handle form submission to send a message
@@ -138,3 +149,4 @@
     </div>
 </body>
 </html>
+

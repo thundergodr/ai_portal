@@ -2,6 +2,7 @@ from flask import Flask, render_template, redirect, url_for, flash, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, current_user, logout_user, login_required
 from flask_socketio import SocketIO, emit
+from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
 from forms import RegistrationForm, LoginForm
 from models import User
@@ -10,7 +11,7 @@ from extensions import db  # Import db from extensions
 import openai
 import os
 from dotenv import load_dotenv
-from datetime import datetime  # Import at the top
+from datetime import datetime
 
 # Load environment variables from .env file
 load_dotenv()
@@ -21,13 +22,16 @@ app.config.from_object(Config)
 
 # Initialize extensions
 db.init_app(app)
+migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'
-socketio = SocketIO(app)  # Initialize SocketIO
+socketio = SocketIO(app)
 
 # Set OpenAI API key from environment variable
 openai.api_key = os.getenv('OPENAI_API_KEY')
+if not openai.api_key:
+    print("OpenAI API key is not set. Check your .env file.")
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -37,16 +41,11 @@ def load_user(user_id):
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
-        print("User is already logged in, redirecting to chat.")
         return redirect(url_for('chat'))
     
     form = RegistrationForm()
-    print("Registration form loaded.")
 
     if form.validate_on_submit():
-        print("Form validation successful.")
-        
-        # Check if username or email already exists
         existing_user = User.query.filter((User.username == form.username.data) | (User.email == form.email.data)).first()
         if existing_user:
             flash('Username or email already exists. Please choose a different one.', 'danger')
@@ -58,15 +57,11 @@ def register():
         db.session.add(user)
         try:
             db.session.commit()
-            print("User successfully added to the database.")
             flash('Your account has been created! You can now log in.', 'success')
             return redirect(url_for('login'))
         except Exception as e:
-            print(f"Error during commit: {e}")
             db.session.rollback()
             flash('An error occurred during registration. Please try again.', 'danger')
-    else:
-        print("Form validation failed or not submitted yet.")
 
     return render_template('register.html', form=form)
 
@@ -74,25 +69,18 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        print("User is already logged in, redirecting to chat.")
         return redirect(url_for('chat'))
     
     form = LoginForm()
-    print("Login form loaded.")
     
     if form.validate_on_submit():
-        print("Form validation successful.")
         user = User.query.filter_by(username=form.username.data).first()
         if user and check_password_hash(user.password_hash, form.password.data):
-            print("Password check successful.")
             login_user(user)
             flash('Login successful!', 'success')
             return redirect(url_for('chat'))
         else:
-            print("Invalid credentials.")
             flash('Login unsuccessful. Please check username and password.', 'danger')
-    else:
-        print("Form validation failed or not submitted yet.")
 
     return render_template('login.html', form=form)
 
@@ -114,19 +102,17 @@ def handle_message(data):
     # Broadcast user message to all clients with the timestamp
     emit('message', {'username': username, 'message': user_message, 'timestamp': timestamp}, broadcast=True)
 
-    # Generate AI response
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": user_message}
-        ],
-        max_tokens=50
-    )
-
-    ai_message = response.choices[0].message['content'].strip()
-    # Broadcast AI response to all clients with the timestamp
-    emit('message', {'username': 'AI', 'message': ai_message, 'timestamp': timestamp}, broadcast=True)
+    # Generate AI response using the new API structure with error handling
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": user_message}]
+        )
+        # Extract the AI's response message
+        ai_message = response['choices'][0]['message']['content'].strip()
+        emit('message', {'username': 'AI', 'message': ai_message, 'timestamp': timestamp}, broadcast=True)
+    except Exception as e:
+        emit('message', {'username': 'AI', 'message': f"Sorry, I encountered an error: {str(e)}", 'timestamp': timestamp}, broadcast=True)
 
 # Logout route
 @app.route('/logout', methods=['POST'])
